@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Enjoy seamless music playback with our intuitive music player. Stream your favorite tunes and download tracks effortlessly. Dive into a world of melody with ease.">
+    <meta name="keywords" content="music, player, Streaming, download, Album, Artist">
+    <meta name="author" content="Sneh Kr">
+    <link href="{{ url_for('static',filename='stylesheets/style.css') }}" rel="stylesheet"/>
+    <link rel="icon" type="image/png" href="https://ik.imagekit.io/snehkr/logo.musichut.png"/>
+    
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link href="{{ url_for('static',filename='stylesheets/playAddon.css') }}" rel="stylesheet"/>
+    <title>Now Playing - {{song_name|safe}}</title>
+  </head>
+
+  <body>
+    <div class="wrapper">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="/?lang=hindi">
+          <img src="https://ik.imagekit.io/snehkr/logo.musichut.png" width="30" height="30" class="d-inline-block align-top" alt="" /> MUSIC HUT
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNavDropdown"
+          aria-controls="navbarNavDropdown"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/?lang=hindi"
+                >HOME</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container" style="margin-top: 30px; margin-bottom: 30px">
+      <div class="player">
+        <div class="details">
+          <div class="now-playing">
+            <p style="font-size: 20px">
+              <i class="fas fa-music"></i> Now Playing
+            </p>
+          </div>
+          <div class="track-art"></div>
+          <div class="track-name">Track Name</div>
+          <div class="track-artist">Track Artist</div>
+        </div>
+        <div class="buttons">
+          <div class="prev-track" onclick="prevTrack()">
+            <i class="fa fa-step-backward fa-2x"></i>
+          </div>
+          <div class="playpause-track" onclick="playpauseTrack()">
+            <i class="fa fa-play-circle fa-5x"></i>
+          </div>
+          <div class="playpause-track" onclick="downloadTrack()">
+            <i class="fa fa-download fa-5x"></i>
+          </div>
+          <div class="next-track" onclick="nextTrack()">
+            <i class="fa fa-step-forward fa-2x"></i>
+          </div>
+        </div>
+        <div class="slider_container">
+          <div class="current-time">00:00</div>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value="0"
+            class="seek_slider"
+            onchange="seekTo()"
+          />
+          <div class="total-duration">00:00</div>
+        </div>
+        <div class="slider_container">
+          <i class="fa fa-volume-down"></i>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value="99"
+            class="volume_slider"
+            onchange="setVolume()"
+          />
+          <i class="fa fa-volume-up"></i>
+        </div>
+      </div>
+      <div class="buttons">
+        <div class="lyrics-button" onclick="showLyrics()">
+          <i class="fa fa-align-left"></i> VIEW LYRICS
+        </div>
+      </div>
+      <div class="lyrics-section" onclick="showLyrics()" style="display: none;">
+      </br><hr>
+        <h2>🎧 LYRICS :</h2>
+        <hr>
+        <div class="lyrics-content">
+        </div>
+      </div>
+    </div></br>
+    <footer class="footer mt-auto py-1 bg-dark text-center">
+      <div class="container">
+        <span class="text-white">©️ MUSICHUT</span>
+      </div>
+    </footer>
+    <script>
+      //let now_playing = document.querySelector(".now-playing");
+      let track_art = document.querySelector(".track-art");
+      let track_name = document.querySelector(".track-name");
+      let track_artist = document.querySelector(".track-artist");
+
+      let playpause_btn = document.querySelector(".playpause-track");
+      let next_btn = document.querySelector(".next-track");
+      let prev_btn = document.querySelector(".prev-track");
+
+      let seek_slider = document.querySelector(".seek_slider");
+      let volume_slider = document.querySelector(".volume_slider");
+      let curr_time = document.querySelector(".current-time");
+      let total_duration = document.querySelector(".total-duration");
+
+      let track_index = 0;
+      let isPlaying = false;
+      let updateTimer;
+
+      // Create new audio element
+      let curr_track = document.createElement("audio");
+
+      // Define the tracks that have to be played
+      let track_list = [
+        {
+          name: "{{song_name|safe}}",
+          artist: "{{ singers.replace('&amp;','')|safe }}",
+          image: "{{image}}",
+          path: "{{mp3_url}}",
+          newpath: "{{download_url}}",
+          file_name: "{{file_name}}",
+          song_id: "{{song_id}}",
+        },
+      ];
+
+      function showLyrics() {
+        let trackToDownload = track_list[track_index];
+        fetch('https://sneh-jiosaavn-api.vercel.app/lyrics?id=' + trackToDownload.song_id)
+          .then(response => response.json())
+          .then(data => {
+            if (data.lyrics) {
+              document.querySelector('.lyrics-content').innerHTML = data.lyrics;
+              document.querySelector('.lyrics-section').style.display = 'block';
+            } else {
+              document.querySelector('.lyrics-content').innerHTML = 'OOPS ! Lyrics not available .....';
+              document.querySelector('.lyrics-section').style.display = 'block';
+            }
+          })
+          .catch(error => console.error('Error fetching lyrics:', error));
+      }
+
+      function random_bg_color() {
+        // Get a number between 64 to 256 (for getting lighter colors)
+        let red = 223;
+        let green = 223;
+        let blue = 223;
+
+        // Construct a color withe the given values
+        let bgColor = "rgb(" + red + "," + green + "," + blue + ")";
+
+        // Set the background to that color
+        document.body.style.background = bgColor;
+      }
+
+      function loadTrack(track_index) {
+        clearInterval(updateTimer);
+        resetValues();
+        curr_track.src = track_list[track_index].path;
+        curr_track.load();
+
+        track_art.style.backgroundImage =
+          "url(" + track_list[track_index].image + ")";
+        track_name.textContent = track_list[track_index].name;
+        track_artist.textContent = track_list[track_index].artist;
+        //now_playing.textContent = "PLAYING " + (track_index + 1) + " OF " + track_list.length;
+
+        updateTimer = setInterval(seekUpdate, 1000);
+        curr_track.addEventListener("ended", nextTrack);
+        random_bg_color();
+      }
+
+      function resetValues() {
+        curr_time.textContent = "00:00";
+        total_duration.textContent = "00:00";
+        seek_slider.value = 0;
+      }
+
+      // Load the first track in the tracklist
+      loadTrack(track_index);
+
+      function playpauseTrack() {
+        if (!isPlaying) playTrack();
+        else pauseTrack();
+      }
+
+      function downloadTrack() {
+        let trackToDownload = track_list[track_index];
+
+        if (trackToDownload && trackToDownload.newpath) {
+          let downloadLink = document.createElement("a");
+          downloadLink.href = trackToDownload.newpath + "&filename=" + trackToDownload.file_name;
+          downloadLink.download = trackToDownload.file_name;
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        } else {
+          console.error("Download link not available for the current track.");
+        }
+      }
+
+      function playTrack() {
+        curr_track.play();
+        isPlaying = true;
+        playpause_btn.innerHTML = '<i class="fa fa-pause-circle fa-5x"></i>';
+      }
+
+      function pauseTrack() {
+        curr_track.pause();
+        isPlaying = false;
+        playpause_btn.innerHTML = '<i class="fa fa-play-circle fa-5x"></i>';
+      }
+
+      function nextTrack() {
+        if (track_index < track_list.length - 1) track_index += 1;
+        else track_index = 0;
+        loadTrack(track_index);
+        playTrack();
+      }
+
+      function prevTrack() {
+        if (track_index > 0) track_index -= 1;
+        else track_index = track_list.length;
+        loadTrack(track_index);
+        playTrack();
+      }
+
+      function seekTo() {
+        seekto = curr_track.duration * (seek_slider.value / 100);
+        curr_track.currentTime = seekto;
+      }
+
+      function setVolume() {
+        curr_track.volume = volume_slider.value / 100;
+      }
+
+      function seekUpdate() {
+        let seekPosition = 0;
+
+        if (!isNaN(curr_track.duration)) {
+          seekPosition = curr_track.currentTime * (100 / curr_track.duration);
+
+          seek_slider.value = seekPosition;
+
+          let currentMinutes = Math.floor(curr_track.currentTime / 60);
+          let currentSeconds = Math.floor(
+            curr_track.currentTime - currentMinutes * 60
+          );
+          let durationMinutes = Math.floor(curr_track.duration / 60);
+          let durationSeconds = Math.floor(
+            curr_track.duration - durationMinutes * 60
+          );
+
+          if (currentSeconds < 10) {
+            currentSeconds = "0" + currentSeconds;
+          }
+          if (durationSeconds < 10) {
+            durationSeconds = "0" + durationSeconds;
+          }
+          if (currentMinutes < 10) {
+            currentMinutes = "0" + currentMinutes;
+          }
+          if (durationMinutes < 10) {
+            durationMinutes = "0" + durationMinutes;
+          }
+
+          curr_time.textContent = currentMinutes + ":" + currentSeconds;
+          total_duration.textContent = durationMinutes + ":" + durationSeconds;
+        }
+      }
+    </script>
+  </div
+  </body>
+</html>
